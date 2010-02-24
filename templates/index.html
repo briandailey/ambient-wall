@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block menu %}
+	<ul>
+		<li><a href="{{ login_url }}">Log In</a></li>
+	</ul>
+	<br class="clear" />
+{% endblock %}
+
+{% block header %}
+{% endblock %}
+
+{% block content %}
+<div class="container rounded">
+	<h1>It's called Ambience.</h1>
+
+	<div class="notice">
+		<p>
+			<strong>February 15:</strong>
+			<br/>
+			<p>Notify users of new messages, better handling of errors from Twitter, clear character count when posting an update.</p>
+			<br/>
+		</p>
+		<p>
+			<strong>February 7:</strong>
+			<br/>
+			Retweeting added.
+			<br/>
+		</p>
+	</div>
+
+	<p>Monitor your social connections (Twitter for now, others later), mute conversations via <a href="http://www.regular-expressions.info/">regular expressions</a>, and whatnot. </p>
+	<p>It's been tested (sort of) in Mozilla Firefox 3.5.x and Google Chrome. I haven't tried IE but I figure there are few IE users that have any idea what a "regular expression" is.</p>
+	<p>This is in uber-beta, so if it all gets wiped away, you can't cry about it. Swim at your own risk. There is no lifeguard on duty.</p>
+
+	<p><a href="{{ login_url }}">Log in</a> with your Google Account</p>
+
+
+	<p>&nbsp;</p>
+	<p>
+		Q: Who's responsible for this thing? 
+		<br/>
+		A: <a href="http://dailytechnology.net">Brian Dailey</a> (<a href="http://twitter.com/brian_dailey">@brian_dailey</a>)
+		<br/>
+		<br/>
+		Q: Why?
+		<br/>
+		A: Well, that requires a list.
+		<ul>
+			<li>I like TweetDeck but I don't like Adobe Air.</li>
+			<li>I wanted the ability to mute certain keywords.</li>
+			<li>I also didn't like giving out my password. This app uses OAuth instead.</li>
+			<li>Got another suggestion? Feel free to <a href="http://realm3.com/contact">tell me about it</a>.</li>
+		</ul>
+		<br/>
+	</p>
+	
+</div>
+{% endblock %}

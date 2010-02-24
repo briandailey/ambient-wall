@@ -1,0 +1,28 @@
+{% for item in friends_timeline %}
+	<div class="item">
+		<div class="user-profile-pic">
+			<img src="{{ item.user.profile_image_url }}" />
+		</div>
+		<div class="text">
+			{{ item.text }}
+		</div>
+
+		<div class="user-name">
+			{{ item.user.name }}
+		</div>
+		<div class="user-screenname">
+			{{ item.user.screen_name }}
+		</div>
+		<div class="date">
+			{{ item.created_at }}
+		</div>
+		<div class="source">
+			via {{ item.source }}
+		</div>
+		<div class="reply-to">
+			{% if item.in_reply_to_status_id %}
+				in reply to <a href="#replyto" rel="{{ item.in_reply_to_status_id }}">{{ item.in_reply_to_screen_name }}</a>
+			{% endif %}
+		</div>
+	</div>
+{% endfor %}

@@ -1,0 +1,15 @@
+application: ambient-wall
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: /static
+  static_dir: static
+
+- url: /dashboard/.*
+  script: dashboard.py
+  login: required
+
+- url: /.*
+  script: main.py

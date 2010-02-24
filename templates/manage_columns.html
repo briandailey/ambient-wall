@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block header %}
+	<script type="text/javascript" src="/static/script/manage-columns.js"></script>
+{% endblock %}
+
+{% block menu %}
+	<ul>
+		<li><a href="/dashboard/">Return To Dashboard</a></li>
+		<li><a href="http://realm3.com/contact">Contact Info</a></li>
+	</ul>
+	<br class="clear" />
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+	<h1>Manage Columns</h1>
+	<div id="sub-menu">
+		<ul>
+			<!-- <li><a href="#" class="toggle" rel="global-settings">Global Settings</a></li> -->
+			<li><a href="#" class="toggle" rel="new-column">New Column</a></li>
+		</ul>
+	</div>
+
+	<div id="msg">
+		{% if msg %}
+			<div class="success">{{ msg|escape }}</div>
+		{% endif %}
+		{% if err %}
+			<div class="error">{{ err|escape }}</div>
+		{% endif %}
+		{% if not twitter_authenticated %}
+			<div class="error">	
+				<p>You need to <a href="/login">authenticate with Twitter</a> before you can view any feeds from Twitter.</p>
+			</div>
+		{% endif %}
+	</div>
+
+	<div id="global-settings" class="hidden">
+		<form method="post" action="/dashboard/userprefs/">
+			<fieldset>
+				<legend>Global Settings</legend>
+				<br/>
+				<input type="submit" value="Save" />
+			</fieldset>
+		</form>
+	</div>
+
+	<div id="new-column" class="hidden">
+		<form method="post" action="/dashboard/columns/">
+		<fieldset>
+			<legend>Create A New Column</legend>
+			<label for="column_type">Type</label>
+			<br/>
+			<select id="column_type" name="column_type">
+				<option value="core">Core</option>
+				<option value="search">Search</option>
+			</select>
+			<br/>
+
+			<div class="column-type column-type-core">
+				<select name="column_data">
+					{% for key in column_type_descriptions.items %}
+						<option value="{{ key.0 }}">{{ key.1 }}</option>
+					{% endfor %}
+				</select>
+			</div>
+
+			<div class="column-type column-type-search hidden">
+				<label for="column_search_data">Search Keyword(s)</label>
+				<br/>
+				<input type="text" id="column_search_data" name="column_search_data" value="" />
+			</div>
+
+			<label for="mute">Mute</label>
+			<br/>
+			<small>You can provide a <a href="http://www.regular-expressions.info/">regular expression</a> for items you want filtered from this column. <br/>
+				Expressions are case-insensitive and are applied to both status text and screen names. <br/>
+				Quotes are not necessary.</small>
+			<br/>
+			<input type="text" name="mute" value="" />
+			<br/>
+
+			<label for="refresh_rate">Refresh Every (Seconds)</label>
+			<br/>
+			<input type="text" id="refresh_rate" name="refresh_rate" value="120" />
+			<br/>
+			
+			<input type="submit" value="Save" />
+
+		</fieldset>
+		</form>
+	</div>
+
+	<ul id="columns">
+	{% for column in columns %}
+		<li id="list-{{ column.key }}">
+			<div class="handle"></div>
+			<div class="column-details" id="column-{{ column.key }}">
+				<div class="description">
+					{{ column.column_description|escape }}
+				</div>
+				<div class="actions">
+					<!-- <a href="/dashboard/column/{{ column.key }}">View</a> -->
+					<a class="toggle" rel="edit-{{ column.key }}" href="#">Edit</a>
+					<a class="delete" rel="{{ column.key }}" href="#">Delete</a>
+				</div>
+				<div id="edit-{{ column.key }}" class="edit-column hidden">
+					<form class="edit" method="post" action="/dashboard/columns/">
+						<fieldset>
+							<legend>Edit {{ column.column_description|escape }}</legend>
+							<input type="hidden" name="key" value="{{ column.key }}" />
+							<input type="hidden" name="action" value="edit" />
+
+							<label for="mute">Mute</label>
+							<br/>
+							<small>You can provide a <a href="http://www.regular-expressions.info/">regular expression</a> for items you want filtered from this column. <br/>
+								Expressions are case-insensitive and are applied to both status text and screen names. <br/>
+								Quotes are not necessary.</small>
+							<br/>
+							<input type="text" name="mute" value="{{ column.mute }}" />
+							<br/>
+
+							<label for="refresh_rate">Refresh Every (Seconds)</label>
+							<br/>
+							<input type="text" id="refresh_rate" name="refresh_rate" value="{{ column.refresh_rate }}" />
+							<br/>
+							<input type="submit" value="Save" />
+						</fieldset>
+					</form>
+				</div>
+			</div>
+			<br class="clear" />
+		</li>
+	{% endfor %}
+	<br/>
+	<p>
+		<small><strong>TIP:</strong> Reorder columns by dragging the image on the left.</small>
+	</p>
+</div>
+{% endblock %}

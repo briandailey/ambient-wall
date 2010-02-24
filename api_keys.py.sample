@@ -1,0 +1,10 @@
+SETTINGS = {
+		'twitter': {
+			# http://www.twitter.com/oauth
+			'application_key': "CHANGE_ME",
+			'application_secret': "CHANGE_ME",
+			'memcached_expire': 60,
+			# Change for production svr.
+			'callback_url': 'http://localhost:8080/verify/',
+		},
+}

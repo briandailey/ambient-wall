@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block header %}
+<script type="text/javascript" src="/static/script/dashboard.js"></script>
+{% endblock %}
+
+{% block menu %}
+	<div id="status-msg"></div>
+	<!-- <span class="logged-in-user">Welcome {{ user.nickname }}</span> -->
+	<ul>
+		<li><a class="logout-link" href="{{ logout_url }}">Sign Out</a></li>
+		<li><a class="manage-columns-link" href="/dashboard/columns/">Manage Columns</a></li>
+		<li><a class="toggle" rel="status" href="#">Update Status</a></li>
+	</ul>
+	<br/>
+	{% if userprefs %}
+		<span class="api-reqs"><span id="twitter-api-remaining-hits">{{ userprefs.twitter_api_remaining_hits }}</span> of {{ userprefs.twitter_hourly_limit }} API requests remaining.</span>
+	{% else %}
+		<br/>
+		<div class="error">
+				<p>You need to <a href="/login">authenticate with Twitter</a> before you can view any feeds from Twitter.</p>
+		</div>
+	{% endif %}
+{% endblock %}
+
+
+{% block content %}
+	<div id="dashboard-columns">
+		<div id="status" class="hidden rounded">
+			<form method="post" action="/dashboard/post/">
+				<textarea id="status-box" name="status"></textarea><br/>
+				<input type="hidden" id="in_reply_to_status_id" name="in_reply_to_status_id" value="" />
+				<input type="hidden" id="retweet_id" name="retweet_id" value="" />
+				<span id="character-count">&nbsp;</span>
+				<input type="submit" value="Post" />
+			</form>
+			<br class="clear"/>
+		</div>
+
+		{% for column in column_results %}
+				<div class="span-8 column rounded {{ column.column.service }}" id="{{ column.column.key }}" rel="{{ column.column.refresh_rate }}">
+					<div class="column-title">
+						<h3>
+							{{ column.column.column_description|escape }}
+							<div class="tools hidden">
+								<a href="#" title="Reload Column" class="reload"><img class="reload" src="/static/img/reload.png" border="0" /></a>
+							</div>
+						</h3>
+						<!--
+						{% if column.column.muted %}
+							<small>Muted: {{ column.column.muted }}</small>
+						{% endif %}
+						-->
+					</div>
+					<div class="column-content">
+						{% include "column.html" %}
+					</div>
+				</div>
+		{% endfor %}
+	</div>
+{% endblock %}
