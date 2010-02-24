@@ -1,0 +1,3 @@
+This uses oAuth from mikeknapp - http://github.com/bdailey/AppEngine-OAuth-Library
+
+This is simply a lightweight application that will allow you to create an app engine project to keep up with Twitter accounts (possibly others in the future).
