@@ -265,6 +265,7 @@ div#menu { 	background-color: #d6efff; text-align: right; padding: 10px; margin:
 div#menu ul { list-style: none; padding: 0; margin: 0; }
 div#menu ul li { float: right; }
 div#menu ul li a { 
+	font-size: 1.3em;
 	float: left;
 	width: auto;
 	display: block;
@@ -322,3 +323,5 @@ span.user-name { display: none; }
 div.column-content div.new { background:#FFFccc; }
 
 div#status-msg { float: left; margin-left: 5px; }
+
+div.front-page { background: url('/static/img/leaf.jpg') no-repeat top right #fff; }
