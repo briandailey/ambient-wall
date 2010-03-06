@@ -313,7 +313,7 @@ class ColumnHandler(object):
 
 				# linkify http links
 				for i in urlfinders:
-					row['text'] = i.sub(r'<a href="\1">\1</a>', row['text'])
+					row['text'] = i.sub(r'<a href="\1" target="blank">\1</a>', row['text'])
 
 				# linkify screen names.	
 				row['text'] = replies.sub(r'@<a href="http://www.twitter.com/\1" class="twitter-user" rel="\1">\1</a>', row['text'])
