@@ -11,15 +11,16 @@
 		<li><a class="manage-columns-link" href="/dashboard/columns/">Manage Columns</a></li>
 		<li><a class="toggle" rel="status" href="#">Update Status</a></li>
 	</ul>
-	<br/>
+	<br class="clear-right" />
 	{% if userprefs %}
-		<span class="api-reqs"><span id="twitter-api-remaining-hits">{{ userprefs.twitter_api_remaining_hits }}</span> of {{ userprefs.twitter_hourly_limit }} API requests remaining.</span>
+		<span class="api-reqs"><span id="twitter-api-remaining-hits">{{ userprefs.twitter_api_remaining_hits }}</span> of {{ userprefs.twitter_hourly_limit }} API requests remaining. &nbsp;&nbsp;</span>
 	{% else %}
 		<br/>
 		<div class="error">
 				<p>You need to <a href="/login">authenticate with Twitter</a> before you can view any feeds from Twitter.</p>
 		</div>
 	{% endif %}
+	<br class="clear" />
 {% endblock %}
 
 

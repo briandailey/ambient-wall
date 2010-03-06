@@ -256,6 +256,7 @@ hr.space {background:#fff;color:#fff;visibility:hidden;}
 .clearfix:after, .container:after {content:"\0020";display:block;height:0;clear:both;visibility:hidden;overflow:hidden;}
 .clearfix, .container {display:block;}
 .clear {clear:both;}
+.clear-right { clear: right; }
 
 /* custom */
 body { background-color: #B5E3FF; }
@@ -265,7 +266,7 @@ div#menu { 	background-color: #d6efff; text-align: right; padding: 10px; margin:
 div#menu ul { list-style: none; padding: 0; margin: 0; }
 div#menu ul li { float: right; }
 div#menu ul li a { 
-	font-size: 1.3em;
+	font-size: 1.1em;
 	float: left;
 	width: auto;
 	display: block;
