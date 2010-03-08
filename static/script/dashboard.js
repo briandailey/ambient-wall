@@ -137,6 +137,7 @@ var dashboard = {
 			if ($('#' + id).children('.new')) {
 				dashboard.titleNewMessages();
 			}
+			dashboard.reset();
 		});
 	},
 	reset: function() {
