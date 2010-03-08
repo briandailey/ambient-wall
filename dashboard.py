@@ -316,9 +316,9 @@ class ColumnHandler(object):
 					row['text'] = i.sub(r'<a href="\1" target="blank">\1</a>', row['text'])
 
 				# linkify screen names.	
-				row['text'] = replies.sub(r'@<a href="http://www.twitter.com/\1" class="twitter-user" rel="\1">\1</a>', row['text'])
+				row['text'] = replies.sub(r'@<a href="http://www.twitter.com/\1" class="twitter-user" rel="\1" target="blank">\1</a>', row['text'])
 
-				row['text'] = twitpic.sub(r'href="http://twitpic.com/\1" rel="\1" class="twitpic">\2<', row['text'])
+				row['text'] = twitpic.sub(r'href="http://twitpic.com/\1" rel="\1" class="twitpic" target="blank">\2<', row['text'])
 
 				if str(row['key']) == column.last_id_returned:
 					new_message = False
