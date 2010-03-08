@@ -37,25 +37,10 @@
 			<br class="clear"/>
 		</div>
 
-		{% for column in column_results %}
-				<div class="span-8 column rounded {{ column.column.service }}" id="{{ column.column.key }}" rel="{{ column.column.refresh_rate }}">
-					<div class="column-title">
-						<h3>
-							{{ column.column.column_description|escape }}
-							<div class="tools hidden">
-								<a href="#" title="Reload Column" class="reload"><img class="reload" src="/static/img/reload.png" border="0" /></a>
-							</div>
-						</h3>
-						<!--
-						{% if column.column.muted %}
-							<small>Muted: {{ column.column.muted }}</small>
-						{% endif %}
-						-->
-					</div>
-					<div class="column-content">
-						{% include "column.html" %}
-					</div>
-				</div>
-		{% endfor %}
+		<div id="all-columns">
+			{% for column in column_results %}
+					{% include "column.html" %}
+			{% endfor %}
+		</div>
 	</div>
 {% endblock %}

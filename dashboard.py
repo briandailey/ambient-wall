@@ -137,7 +137,11 @@ class ManageColumns(webapp.RequestHandler):
 														refresh_rate=refresh_rate,
 														mute=self.request.get('mute'))
 			column.put()
-			return self.redirect('/dashboard/columns/?msg=added')
+
+			if self.request.get('request-type') == 'ajax':
+				return self.redirect('/dashboard/column/' + str(column.key()))
+			else:
+				return self.redirect('/dashboard/columns/?msg=added')
 
 class ColumnResults(webapp.RequestHandler):
 	def get(self, key=""):
@@ -156,8 +160,11 @@ class ColumnResults(webapp.RequestHandler):
 		# start = quota.get_request_cpu_usage()
 
 		results = handler.getColumnResults(key, userprefs, use_memcached)
+		column = models.Column.gql('WHERE __key__ = :1', Key(key)).get()
+
 		column = {
-			'results': results
+			'results': results,
+			'column': column
 		}
 
 		# end = quota.get_request_cpu_usage()

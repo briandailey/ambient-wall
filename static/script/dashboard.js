@@ -22,8 +22,22 @@ $(document).ready(function() {
 		dashboard.setReloadInterval(id);
 	});
 
-	$('a.twitpic').click(function() {
+	$('a.twitpic').live('click', function() {
 	});
+
+	$('a.twitter-user').live('click', function() {
+		$.post('/dashboard/columns/',
+		{ 'column_type': 'twitter-user', 
+			'column_user_data': $(this).attr('rel'),
+			'request-type': 'ajax'
+		},
+		function (data) {
+			$('#all-columns').append(data);
+			dashboard.reset();
+		});
+		return false;
+	});
+
 
 	dashboard.title = document.title;
 
@@ -83,6 +97,25 @@ $(document).ready(function() {
 		return false;
 	});
 
+	$('a.remove').live('click', function() {
+		if (!confirm('Are you sure you want to remove this column?')) {
+			return false;
+		}
+		var key = $(this).parents('.column').attr('id');
+		$.post('/dashboard/columns/',
+			{
+				action: 'delete',
+				key: key
+			},
+			function(data) {
+				if (data == 'success') {
+					$('#' + key).remove();
+				}
+		});
+		return false;
+	});
+
+
 });
 
 $(window).resize(function() {
@@ -97,15 +130,19 @@ var dashboard = {
 			}
 		$('#status-msg').html('<img src="/static/img/loading.gif" />');
 		$.get('/dashboard/column/' + id, params, function(data) {
-			$('#' + id + ' .column-content').html(data);
+			$('#' + id).replaceWith(data);
 			var twitter_api_remaining_hits = $('#' + id + ' input[name=twitter_api_remaining_hits]').val();
-			$('#'+ id + ' .hidden').hide();
 			$('#twitter-api-remaining-hits').text(twitter_api_remaining_hits);
 			$('#status-msg').html('');
 			if ($('#' + id).children('.new')) {
 				dashboard.titleNewMessages();
 			}
 		});
+	},
+	reset: function() {
+			$('.rounded').corner();
+			$('.hidden').hide();
+			dashboard.resizeColumns();
 	},
 	titleNewMessages: function() {
 		document.title = '*' + dashboard.title;
