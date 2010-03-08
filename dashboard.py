@@ -147,28 +147,26 @@ class ColumnResults(webapp.RequestHandler):
 
 		userprefs = models.UserPrefs.gql("WHERE user = :user LIMIT 1", user=users.get_current_user()).get()
 
-		# use_memcached = True
-		use_memcached = False
+		use_memcached = True
+		# use_memcached = False
 
 		if self.request.get('use_memcached'):
 			use_memcached = False 
 
-		start = quota.get_request_cpu_usage()
-
+		# start = quota.get_request_cpu_usage()
 
 		results = handler.getColumnResults(key, userprefs, use_memcached)
 		column = {
 			'results': results
 		}
 
-		end = quota.get_request_cpu_usage()
-		logging.info("Column reload cost %d megacycles." % (start - end))
+		# end = quota.get_request_cpu_usage()
+		# logging.info("Column reload cost %d megacycles." % (start - end))
 		path = os.path.join(os.path.dirname(__file__), 'templates', 'column.html')
 		self.response.out.write(template.render(path, { 'column': column, 'userprefs': userprefs }))
 
 class ColumnHandler(object):
 
-	# TODO - track # of requests for twitter API
 	def getTwitterRateLimit(self):
 		userprefs = models.UserPrefs.gql("WHERE user = :user LIMIT 1", user=users.get_current_user()).get()
 		if userprefs is None or userprefs.twitter_token is None:
@@ -219,7 +217,7 @@ class ColumnHandler(object):
 					return False
 
 				try:
-					results = client.make_request(url=url, token=userprefs.twitter_token, secret=userprefs.twitter_secret)
+					results = client.make_request(url=url, token=userprefs.twitter_token, secret=userprefs.twitter_secret,additional_params={ 'count': 50 } )
 				except:
 					return False
 
@@ -232,7 +230,7 @@ class ColumnHandler(object):
 			elif column.column_type == 'search':
 				search_url = 'http://search.twitter.com/search.json'
 				try:
-					search_results = client.make_request(url=search_url, token=userprefs.twitter_token, secret=userprefs.twitter_secret, additional_params={ 'q': column.column_data })
+					search_results = client.make_request(url=search_url, token=userprefs.twitter_token, secret=userprefs.twitter_secret, additional_params={ 'q': column.column_data, 'count': 50 })
 				except:
 					return False
 				search_results = json.loads(search_results.content)
@@ -240,12 +238,24 @@ class ColumnHandler(object):
 					return False
 
 				results = self.__transformTwitterResults(search_results["results"], column)
+			elif column.column_type == 'twitter-user':
+				url = 'http://api.twitter.com/1/statuses/user_timeline.json'
+				try:
+					results = client.make_request(url=url, token=userprefs.twitter_token, secret=userprefs.twitter_secret,additional_params={ 'screen_name': column.column_data, 'count': 50 } )
+				except:
+					return False
+
+				results = json.loads(results.content)
+				if type(results).__name__ != 'list' and results.has_key('error'):
+					return False
+
+				results = self.__transformTwitterResults(results, column)
 
 		if not memcache.add(memcached_key, results, column.refresh_rate):
 			logging.error("Memcache save to " + memcached_key + " for " + str(column.refresh_rate) + " seconds failed.")
 
 		# save the last id returned.
-		if len(results) > 0 and results[0]['key']:
+		if type(results).__name__ == 'list' and len(results) > 0 and results[0]['key']:
 			# logging.error('Saving last key returned: ' + str(results[0]['key']))
 			column.last_id_returned = str(results[0]['key'])
 			column.put()
@@ -268,7 +278,7 @@ class ColumnHandler(object):
 		results = []
 
 		for item in items: 
-				if column.column_type == 'core':
+				if column.column_type == 'core' or column.column_type == 'twitter-user':
 					if column.column_data == 'direct-messages':
 						row = {
 							'key': item['id'],
