@@ -16,6 +16,7 @@ from django.utils import simplejson as json
 from google.appengine.api import memcache
 from google.appengine.ext import db
 from google.appengine.ext.db import Key
+from google.appengine.api import quota
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -31,9 +32,9 @@ class ManageColumns(webapp.RequestHandler):
 
 	def setColumnTypeDescriptions(self):
 		self.column_type_descriptions = {
-			"friends-timeline": "Friends Timeline",
-			"mentions": "Mentions",
-			"direct-messages": "Direct Messages",
+			"friends-timeline": "Your Friends Timeline",
+			"mentions": "Mentions Of You",
+			"direct-messages": "Direct Messages To You",
 			# "retweets-of-me": "Retweets Of Me",
 		}
 	
@@ -120,6 +121,10 @@ class ManageColumns(webapp.RequestHandler):
 				column_data = self.request.get('column_search_data')
 				column_description=('Search: "%s"' % self.request.get('column_search_data'))
 
+			elif self.request.get('column_type') == 'twitter-user':
+				column_data = self.request.get('column_user_data')
+				column_description=('@%s' % self.request.get('column_user_data'))
+
 			try:
 				refresh_rate = int(self.request.get('refresh_rate'))
 			except ValueError:
@@ -142,16 +147,22 @@ class ColumnResults(webapp.RequestHandler):
 
 		userprefs = models.UserPrefs.gql("WHERE user = :user LIMIT 1", user=users.get_current_user()).get()
 
-		use_memcached = True
+		# use_memcached = True
+		use_memcached = False
 
 		if self.request.get('use_memcached'):
 			use_memcached = False 
+
+		start = quota.get_request_cpu_usage()
+
 
 		results = handler.getColumnResults(key, userprefs, use_memcached)
 		column = {
 			'results': results
 		}
 
+		end = quota.get_request_cpu_usage()
+		logging.info("Column reload cost %d megacycles." % (start - end))
 		path = os.path.join(os.path.dirname(__file__), 'templates', 'column.html')
 		self.response.out.write(template.render(path, { 'column': column, 'userprefs': userprefs }))
 

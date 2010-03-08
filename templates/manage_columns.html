@@ -54,8 +54,9 @@
 			<label for="column_type">Type</label>
 			<br/>
 			<select id="column_type" name="column_type">
-				<option value="core">Core</option>
-				<option value="search">Search</option>
+				<option value="core">Twitter Basics</option>
+				<option value="search">Search Twitter</option>
+				<option value="twitter-user">Twitter User</option>
 			</select>
 			<br/>
 
@@ -73,11 +74,16 @@
 				<input type="text" id="column_search_data" name="column_search_data" value="" />
 			</div>
 
+			<div class="column-type column-type-twitter-user hidden">
+				<label for="column_user_data">Username</label>
+				<br/>
+				<input type="text" id="column_user_data" name="column_user_data" value="" />
+			</div>
+
 			<label for="mute">Mute</label>
 			<br/>
-			<small>You can provide a <a href="http://www.regular-expressions.info/">regular expression</a> for items you want filtered from this column. <br/>
-				Expressions are case-insensitive and are applied to both status text and screen names. <br/>
-				Quotes are not necessary.</small>
+			<small>You can provide a <a href="http://www.regular-expressions.info/">regular expression</a> for items you want filtered from this column. To block all 4square and Gowalla posts, for example, add "4sq|gowal.la" (without the quotes).<br/>
+				Expressions are case-insensitive and are applied to both status text and screen names.</small>
 			<br/>
 			<input type="text" name="mute" value="" />
 			<br/>
