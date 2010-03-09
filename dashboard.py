@@ -305,7 +305,8 @@ class ColumnHandler(object):
 						'created_at': item['created_at'],
 						'source': '',
 					}
-					results.append(self.__applyRegexes(row, column, mute_regexes, transformative_regexes))
+					if self.__checkMutes(row, column, mute_regexes):
+						results.append(self.__applyRegexes(row, column, transformative_regexes))
 			else:
 				for item in items: 
 					row = {
@@ -321,7 +322,8 @@ class ColumnHandler(object):
 						'created_at': item['created_at'],
 						'source': item['source'],
 					}
-					results.append(self.__applyRegexes(row, column, mute_regexes, transformative_regexes))
+					if self.__checkMutes(row, column, mute_regexes):
+						results.append(self.__applyRegexes(row, column, transformative_regexes))
 		elif column.column_type == 'search':
 			logging.info('Search column, applying tranformations.')
 			ge = re.compile('(&gt;)')
@@ -343,19 +345,21 @@ class ColumnHandler(object):
 					'created_at': item['created_at'],
 					'source': item['source'],
 				}
-				results.append(self.__applyRegexes(row, column, mute_regexes, transformative_regexes))
+				if self.__checkMutes(row, column, mute_regexes):
+					results.append(self.__applyRegexes(row, column, transformative_regexes))
 
 		return results
-	
-	def __applyRegexes(self, row, column, mute_regexes, transformative_regexes):
+
+	def __checkMutes(self, row, column, mute_regexes):
 		# filter out muted items.
-		muted = False
+		approved = True
 		for regex in mute_regexes:
 			if re.search(regex[1], row[regex[0]]):
-				muted = True
-		if muted:
-			return nil
+				approved = False
 
+		return approved
+	
+	def __applyRegexes(self, row, column, transformative_regexes):
 		# transformative regexes
 		for regex in transformative_regexes:
 			row['text'] = regex[1].sub(regex[0], row['text'])
