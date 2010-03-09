@@ -7,6 +7,7 @@ import oauth
 import models
 import os
 import api_keys
+import re
 
 from google.appengine.api import users
 from google.appengine.ext import webapp
@@ -27,7 +28,6 @@ except:
 							
 
 class ManageColumns(webapp.RequestHandler):
-
 	templateValues = {}
 
 	def setColumnTypeDescriptions(self):
@@ -39,6 +39,8 @@ class ManageColumns(webapp.RequestHandler):
 		}
 	
 	def get(self, key=""):
+		logging.info('Accessing dashboard management')
+
 
 		templateValues = {}
 	
@@ -144,8 +146,10 @@ class ManageColumns(webapp.RequestHandler):
 				return self.redirect('/dashboard/columns/?msg=added')
 
 class ColumnResults(webapp.RequestHandler):
+
 	def get(self, key=""):
 
+		logging.info('Accessing column results')
 		handler = ColumnHandler()
 		handler.getTwitterRateLimit()
 
@@ -180,11 +184,13 @@ class ColumnHandler(object):
 			return False
 
 		client = oauth.TwitterClient(api_keys.SETTINGS['twitter']['application_key'], api_keys.SETTINGS['twitter']['application_secret'], api_keys.SETTINGS['twitter']['callback_url'])
-		rate_limit_status = client.make_request(url="http://twitter.com/account/rate_limit_status.json", token=userprefs.twitter_token, secret=userprefs.twitter_secret)
-		rate_limit_status = json.loads(rate_limit_status.content)
-		if type(rate_limit_status).__name__ != 'list' and rate_limit_status.has_key('error'):
-				return False
-		# logging.error(rate_limit_status)
+		try:
+			rate_limit_status = client.make_request(url="http://twitter.com/account/rate_limit_status.json", token=userprefs.twitter_token, secret=userprefs.twitter_secret)
+			rate_limit_status = json.loads(rate_limit_status.content)
+			if type(rate_limit_status).__name__ != 'list' and rate_limit_status.has_key('error'):
+					return False
+		except:
+			return False
 	
 		userprefs.twitter_api_remaining_hits = str(rate_limit_status["remaining_hits"])
 		userprefs.twitter_reset_time = str(rate_limit_status["reset_time_in_seconds"])
@@ -192,14 +198,15 @@ class ColumnHandler(object):
 		userprefs.put()
 	
 
-	def getColumnResults(self, key, userprefs, use_memcached=True):
+	def getColumnResults(self, key, userprefs, use_memcached):
 		column = models.Column.gql('WHERE __key__ = :1', Key(key)).get()
 		if column == None:
 			return False
 
 		memcached_key = 'column-results-' + key
 
-		if use_memcached:
+		if use_memcached == True:
+			# logging.info('Returning results from memcached.')
 			results = memcache.get(memcached_key)
 			if results:
 				return results
@@ -209,6 +216,7 @@ class ColumnHandler(object):
 				return False
 
 			client = oauth.TwitterClient(api_keys.SETTINGS['twitter']['application_key'], api_keys.SETTINGS['twitter']['application_secret'], api_keys.SETTINGS['twitter']['callback_url'])
+			additional_params = { 'count': 50 }
 
 			if column.column_type == 'core':
 				if column.column_data == 'friends-timeline':
@@ -223,40 +231,32 @@ class ColumnHandler(object):
 					logging.error('Unknown column type ' + column.column_type)
 					return False
 
-				try:
-					results = client.make_request(url=url, token=userprefs.twitter_token, secret=userprefs.twitter_secret,additional_params={ 'count': 50 } )
-				except:
-					return False
-
-				results = json.loads(results.content)
-				if type(results).__name__ != 'list' and results.has_key('error'):
-					return False
-
-				results = self.__transformTwitterResults(results, column)
-
 			elif column.column_type == 'search':
-				search_url = 'http://search.twitter.com/search.json'
-				try:
-					search_results = client.make_request(url=search_url, token=userprefs.twitter_token, secret=userprefs.twitter_secret, additional_params={ 'q': column.column_data, 'count': 50 })
-				except:
-					return False
-				search_results = json.loads(search_results.content)
-				if type(search_results).__name__ != 'list' and search_results.has_key('error'):
-					return False
+				url = 'http://search.twitter.com/search.json'
+				additional_params['q'] = column.column_data
 
-				results = self.__transformTwitterResults(search_results["results"], column)
 			elif column.column_type == 'twitter-user':
 				url = 'http://api.twitter.com/1/statuses/user_timeline.json'
-				try:
-					results = client.make_request(url=url, token=userprefs.twitter_token, secret=userprefs.twitter_secret,additional_params={ 'screen_name': column.column_data, 'count': 50 } )
-				except:
-					return False
+				additional_params['screen_name'] = column.column_data
+			else: # unknown
+				logging.error('Unknown column type ' + column.column_type)
+				return False
 
+			try:
+				results = client.make_request(url=url, token=userprefs.twitter_token, secret=userprefs.twitter_secret, additional_params=additional_params)
 				results = json.loads(results.content)
-				if type(results).__name__ != 'list' and results.has_key('error'):
-					return False
+			except:
+				return False
 
-				results = self.__transformTwitterResults(results, column)
+			if type(results).__name__ != 'list' and results.has_key('error'):
+				return False
+
+			if column.column_type == 'search':
+				# twitter search results are cocooned inside
+				logging.info('Search type.')
+				results = results["results"]
+
+			results = self.__transformTwitterResults(results, column)
 
 		if not memcache.add(memcached_key, results, column.refresh_rate):
 			logging.error("Memcache save to " + memcached_key + " for " + str(column.refresh_rate) + " seconds failed.")
@@ -270,97 +270,107 @@ class ColumnHandler(object):
 		return results
 	
 	def __transformTwitterResults(self, items, column):
-		import re
-		replies = re.compile('@(\w*)')
-		twitpic = re.compile('href="http://twitpic.com/(\w*)">([^<]*)<')
-		ge = re.compile('(&gt;)')
-		le = re.compile('(&lt;)')
-		urlfinders = [
-			re.compile("(https?://([-\w\.]+)+(:\d+)?(/([\w/_\.-]*(\?\S+)?)?)?)"),
-		]
-		new_message = True
+		# cannot be a dictionary because it must be sequential.
+		transformative_regexes = (
+			# links
+			( r'<a href="\1" target="blank">\1</a>', re.compile("(https?://([-\w\.]+)+(:\d+)?(/([\w/_\.-]*(\?\S+)?)?)?)")),
+			# mentions
+			( r'@<a href="http://www.twitter.com/\1" class="twitter-user" rel="\1" target="blank">\1</a>', re.compile('@(\w*)')),
+			# twitpic links			
+			( r'href="http://twitpic.com/\1" rel="\1" class="twitpic" target="blank">\2<', re.compile('href="http://twitpic.com/(\w*)">([^<]*)<')),
+		)
 
+		mute_regexes = ()
 		if column.mute is not None and len(column.mute) > 0:
-			mute = re.compile(column.mute, re.IGNORECASE)
+			mute_regexes = (
+				( 'screen_name', re.compile(column.mute, re.IGNORECASE) ),
+				( 'text', re.compile(column.mute, re.IGNORECASE) ),
+			)
+			
 		results = []
 
-		for item in items: 
-				if column.column_type == 'core' or column.column_type == 'twitter-user':
-					if column.column_data == 'direct-messages':
-						row = {
-							'key': item['id'],
-							'profile_image_url': item['sender']['profile_image_url'],
-							'name': item['sender']['name'],
-							'link': 'http://www.twitter.com/' + item['sender']['screen_name'] + '/status/' + str(item['id']),
-							'screen_name': item['sender']['screen_name'],
-							'screen_name_link': ('http://twitter.com/%s' % item['sender']['screen_name']),
-							'text': item['text'],
-							'in_reply_to_status_id': '',
-							'in_reply_to_screen_name': '',
-							'created_at': item['created_at'],
-							'source': '',
-						}
-					else:
-						row = {
-							'key': item['id'],
-							'profile_image_url': item['user']['profile_image_url'],
-							'name': item['user']['name'],
-							'link': 'http://www.twitter.com/' + item['user']['screen_name'] + '/status/' + str(item['id']),
-							'screen_name': item['user']['screen_name'],
-							'screen_name_link': ('http://twitter.com/%s' % item['user']['screen_name']),
-							'text': item['text'],
-							'in_reply_to_status_id': item['in_reply_to_status_id'],
-							'in_reply_to_screen_name': item['in_reply_to_screen_name'],
-							'created_at': item['created_at'],
-							'source': item['source'],
-						}
-				elif column.column_type == 'search':
-					# for some reash search results 'source' is escaped html. unescape it.
-					item['source'] = ge.sub(r'>', item['source'])
-					item['source'] = le.sub(r'<', item['source'])
-					row = {	
+		if column.column_type == 'core' or column.column_type == 'twitter-user':
+			if column.column_data == 'direct-messages':
+				for item in items: 
+					row = {
 						'key': item['id'],
-						'profile_image_url': item['profile_image_url'],
-						'name': item['from_user'],
-						'link': 'http://www.twitter.com/' + item['from_user'] + '/status/' + str(item['id']),
-						'screen_name': item['from_user'],
-						'screen_name_link': ('http://twitter.com/%s' % item['from_user']),
+						'profile_image_url': item['sender']['profile_image_url'],
+						'name': item['sender']['name'],
+						'link': 'http://www.twitter.com/' + item['sender']['screen_name'] + '/status/' + str(item['id']),
+						'screen_name': item['sender']['screen_name'],
+						'screen_name_link': ('http://twitter.com/%s' % item['sender']['screen_name']),
 						'text': item['text'],
-						'in_reply_to_status_id': item['to_user_id'],
-						'in_reply_to_screen_name': None,
+						'in_reply_to_status_id': '',
+						'in_reply_to_screen_name': '',
+						'created_at': item['created_at'],
+						'source': '',
+					}
+					results.append(self.__applyRegexes(row, column, mute_regexes, transformative_regexes))
+			else:
+				for item in items: 
+					row = {
+						'key': item['id'],
+						'profile_image_url': item['user']['profile_image_url'],
+						'name': item['user']['name'],
+						'link': 'http://www.twitter.com/' + item['user']['screen_name'] + '/status/' + str(item['id']),
+						'screen_name': item['user']['screen_name'],
+						'screen_name_link': ('http://twitter.com/%s' % item['user']['screen_name']),
+						'text': item['text'],
+						'in_reply_to_status_id': item['in_reply_to_status_id'],
+						'in_reply_to_screen_name': item['in_reply_to_screen_name'],
 						'created_at': item['created_at'],
 						'source': item['source'],
 					}
-
-				# filter out muted items.
-				if column.mute is not None and len(column.mute) > 0:
-					if re.search(mute, row['text']):
-						continue
-					if re.search(mute, row['screen_name']):
-						continue
-
-				# linkify http links
-				for i in urlfinders:
-					row['text'] = i.sub(r'<a href="\1" target="blank">\1</a>', row['text'])
-
-				# linkify screen names.	
-				row['text'] = replies.sub(r'@<a href="http://www.twitter.com/\1" class="twitter-user" rel="\1" target="blank">\1</a>', row['text'])
-
-				row['text'] = twitpic.sub(r'href="http://twitpic.com/\1" rel="\1" class="twitpic" target="blank">\2<', row['text'])
-
-				if str(row['key']) == column.last_id_returned:
-					new_message = False
-
-				row['new_message'] = new_message
-				
-				results.append(row)
+					results.append(self.__applyRegexes(row, column, mute_regexes, transformative_regexes))
+		elif column.column_type == 'search':
+			logging.info('Search column, applying tranformations.')
+			ge = re.compile('(&gt;)')
+			le = re.compile('(&lt;)')
+			for item in items: 
+				# for some reash search results 'source' is escaped html. unescape it.
+				item['source'] = ge.sub(r'>', item['source'])
+				item['source'] = le.sub(r'<', item['source'])
+				row = {	
+					'key': item['id'],
+					'profile_image_url': item['profile_image_url'],
+					'name': item['from_user'],
+					'link': 'http://www.twitter.com/' + item['from_user'] + '/status/' + str(item['id']),
+					'screen_name': item['from_user'],
+					'screen_name_link': ('http://twitter.com/%s' % item['from_user']),
+					'text': item['text'],
+					'in_reply_to_status_id': item['to_user_id'],
+					'in_reply_to_screen_name': None,
+					'created_at': item['created_at'],
+					'source': item['source'],
+				}
+				results.append(self.__applyRegexes(row, column, mute_regexes, transformative_regexes))
 
 		return results
+	
+	def __applyRegexes(self, row, column, mute_regexes, transformative_regexes):
+		# filter out muted items.
+		muted = False
+		for regex in mute_regexes:
+			if re.search(regex[1], row[regex[0]]):
+				muted = True
+		if muted:
+			return nil
 
+		# transformative regexes
+		for regex in transformative_regexes:
+			row['text'] = regex[1].sub(regex[0], row['text'])
 
-class Dashboard(webapp.RequestHandler):
+		if str(row['key']) > column.last_id_returned:
+			row['new_message'] = True
+		else:
+			row['new_message'] = False
+
+		return row
+
+class MainDashboard(webapp.RequestHandler):
 
 	def get(self):
+		# logging.info('Accessing dashboard')
 		user = users.get_current_user()
 
 		handler = ColumnHandler()
@@ -372,7 +382,7 @@ class Dashboard(webapp.RequestHandler):
 		column_results = []
 
 		for column in columns:
-			results = handler.getColumnResults(str(column.key()), userprefs)
+			results = handler.getColumnResults(str(column.key()), userprefs, True)
 			if results is False:
 					results = None
 			column_results.append({
@@ -438,10 +448,10 @@ class PostStatus(webapp.RequestHandler):
 
 def main():
   application = webapp.WSGIApplication( [
-				('/dashboard/', Dashboard),
-				('/dashboard/columns/', ManageColumns),
-				('/dashboard/column/(.*)', ColumnResults),
-				('/dashboard/post/', PostStatus),
+				(r'/dashboard/columns/', ManageColumns),
+				(r'/dashboard/column/(\w*)', ColumnResults),
+				(r'/dashboard/post/', PostStatus),
+				(r'/dashboard/$', MainDashboard),
 			], debug=True)
   util.run_wsgi_app(application)
 
