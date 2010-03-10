@@ -220,7 +220,7 @@ class ColumnHandler(object):
 
 			if column.column_type == 'core':
 				if column.column_data == 'friends-timeline':
-					url = "http://twitter.com/statuses/friends_timeline.json"
+					url = "http://twitter.com/statuses/home_timeline.json"
 				elif column.column_data == 'mentions':
 					url = 'http://twitter.com/statuses/mentions.json'
 				elif column.column_data == 'direct-messages':
