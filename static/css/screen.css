@@ -301,7 +301,7 @@ div.column-details .actions { margin: 0 0 0 10px; }
 .column-title .tools { 
 	position: absolute;
 	right: 0px;
-	top: -10px;
+	top: 1px;
 	float: right;
 	opacity: 0.4;
 	filter:alpha(opacity=40);
