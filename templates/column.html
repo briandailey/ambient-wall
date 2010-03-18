@@ -14,42 +14,6 @@
 		-->
 	</div>
 	<div class="column-content">
-		{% if userprefs %}
-			<input type="hidden" name="twitter_api_remaining_hits" value="{{ userprefs.twitter_api_remaining_hits }}"/>
-		{% endif %}
-		{% for item in column.results %}
-			<div class="{% if item.new_message %}new {% endif %}item" rel="{{ item.key }}">
-				<div class="user-profile-pic">
-					<a target="blank" href="{{ item.screen_name_link }}"><img src="{{ item.profile_image_url }}" width="48" height="48" border="0" /></a>
-				</div>
-				<div class="text">{{ item.text }}</div>
-
-				<div class="user-info">
-					<span class="user-name">
-						{{ item.name }}
-					</span>
-					<span class="user-screenname">
-						<a href="{{ item.screen_name_link }}">{{ item.screen_name }}</a>
-					</span>
-					<span class="date">
-						<a href="{{ item.link }}">{{ item.created_at }}</a>
-					</span>
-					<span class="source">
-						via {{ item.source }}
-					</span>
-					<span class="in-reply-to">
-						{% if item.in_reply_to_status_id %}
-							in reply to <a target="blank" href="http://twitter.com/{{ item.in_reply_to_screen_name }}/statuses/{{ item.in_reply_to_status_id }}" rel="{{ item.in_reply_to_status_id }}">{{ item.in_reply_to_screen_name }}</a>
-						{% endif %}
-					</span>
-				</div>
-				<div class="tools hidden">
-					<div>Options</div>
-					<a href="#" class="reply-to">Reply</a>
-					<a href="#" class="retweet">Retweet</a>
-					<a href="#" class="direct-message">DM</a>
-				</div>
-			</div>
-		{% endfor %}
+		{% include "column-partial.html" %}
 	</div>
 </div>

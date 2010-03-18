@@ -157,8 +157,13 @@ class ColumnResults(webapp.RequestHandler):
 			use_memcached = False 
 
 		# start = quota.get_request_cpu_usage()
+		additional_params = {}
+		if self.request.get('max_id'):
+			additional_params['max_id'] = self.request.get('max_id')
+		if self.request.get('since_id'):
+			additional_params['since_id'] = self.request.get('since_id')
 
-		results = handler.getColumnResults(key, userprefs, use_memcached)
+		results = handler.getColumnResults(key, userprefs, use_memcached, additional_params)
 		column = models.Column.gql('WHERE __key__ = :1', Key(key)).get()
 
 		column = {
@@ -168,7 +173,10 @@ class ColumnResults(webapp.RequestHandler):
 
 		# end = quota.get_request_cpu_usage()
 		# logging.info("Column reload cost %d megacycles." % (start - end))
-		path = os.path.join(os.path.dirname(__file__), 'templates', 'column.html')
+		if self.request.get('format') and "full".equals(self.request.get('format')):
+			path = os.path.join(os.path.dirname(__file__), 'templates', 'column.html')
+		else:
+			path = os.path.join(os.path.dirname(__file__), 'templates', 'column-partial.html')
 		self.response.out.write(template.render(path, { 'column': column, 'userprefs': userprefs }))
 
 class ColumnHandler(object):
@@ -193,7 +201,7 @@ class ColumnHandler(object):
 		userprefs.put()
 	
 
-	def getColumnResults(self, key, userprefs, use_memcached):
+	def getColumnResults(self, key, userprefs, use_memcached, additional_params = {}):
 		column = models.Column.gql('WHERE __key__ = :1', Key(key)).get()
 		if column == None:
 			return False
@@ -211,7 +219,7 @@ class ColumnHandler(object):
 				return False
 
 			client = oauth.TwitterClient(api_keys.SETTINGS['twitter']['application_key'], api_keys.SETTINGS['twitter']['application_secret'], api_keys.SETTINGS['twitter']['callback_url'])
-			additional_params = { 'count': 50 }
+			additional_params.update({ 'count': 50 })
 
 			if column.column_type == 'core':
 				if column.column_data == 'friends-timeline':
@@ -237,6 +245,8 @@ class ColumnHandler(object):
 				logging.error('Unknown column type ' + column.column_type)
 				return False
 
+			logging.error(additional_params)
+
 			try:
 				results = client.make_request(url=url, token=userprefs.twitter_token, secret=userprefs.twitter_secret, additional_params=additional_params)
 				results = json.loads(results.content)
@@ -257,7 +267,7 @@ class ColumnHandler(object):
 			logging.error("Memcache save to " + memcached_key + " for " + str(column.refresh_rate) + " seconds failed.")
 
 		# save the last id returned.
-		if type(results).__name__ == 'list' and len(results) > 0 and results[0]['key']:
+		if type(results).__name__ == 'list' and len(results) > 0 and results[0]['key'] and column.last_id_returned != None and int(column.last_id_returned) < results[0]['key']:
 			# logging.error('Saving last key returned: ' + str(results[0]['key']))
 			column.last_id_returned = str(results[0]['key'])
 			column.put()

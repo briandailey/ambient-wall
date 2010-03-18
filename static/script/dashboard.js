@@ -26,7 +26,7 @@ $(document).ready(function() {
 	});
 
 	$('a.twitter-user').live('click', function() {
-		$.post('/dashboard/columns/',
+		$.post('/dashboard/columns/?format=full',
 		{ 'column_type': 'twitter-user', 
 			'column_user_data': $(this).attr('rel'),
 			'request-type': 'ajax'
@@ -90,7 +90,7 @@ $(document).ready(function() {
 
 	$('a.reload').live('click', function() {
 		var key = $(this).parents('.column').attr('id');
-		dashboard.reloadColumn(key, { 'use_memcached': 'false' });
+		dashboard.reloadColumn(key, { 'since_id': $('#'+key).find('.item:first').attr('rel'), 'use_memcached': 'false' });
 		// Reset intervals
 		clearInterval('dashboard.reloadColumn("'+key+'")');
 		dashboard.setReloadInterval(key);
@@ -114,7 +114,24 @@ $(document).ready(function() {
 		});
 		return false;
 	});
-
+	
+	$('div.column .column-content').scroll(function() {
+		// scrool to bottom of window. get more results from twitter.
+		var elem = $(this);
+		if (elem[0].scrollHeight - elem.scrollTop() == elem.outerHeight()) {
+			if ($(this).parents('.column').hasClass('twitter') == false) {
+				return false;
+			}
+			if ($('#status-msg .loading-indicator').length != 0) {
+				return false;
+			}
+			var id = $(this).parents('.column').attr('id');
+			var max_id = $(this).find('.item:last').attr('rel') - 1;
+			dashboard.loading();
+			dashboard.reloadColumn(id, { 'max_id': max_id, 'use_memcached': 'false' }, { 'results_action': 'append' });
+			
+		}
+	});
 
 });
 
@@ -123,20 +140,35 @@ $(window).resize(function() {
 });
 
 var dashboard = {
+	loading: function() {
+		$('#status-msg').html('<img src="/static/img/loading.gif" class="loading-indicator" />');
+	},
 	reloadColumn: function(id) {
-			var params = {};
-			if (arguments[1]) {
-				params = arguments[1];
-			}
-		$('#status-msg').html('<img src="/static/img/loading.gif" />');
+		var params = {};
+		var options = {};
+		if (arguments[1]) { 
+			params = arguments[1]; 
+		} else {
+			params = { 'since_id': $('#'+id+' .column-content .item:first').attr('rel') };
+		}
+		if (arguments[2]) { options = arguments[2]; }
+
+		dashboard.loading();
 		$.get('/dashboard/column/' + id, params, function(data) {
-			$('#' + id).replaceWith(data);
+			if (options['results_action'] == 'append') {
+				$('#' + id + ' .column-content').append(data);
+			} else {
+				$('#' + id + ' .column-content').prepend(data);
+			}
 			var twitter_api_remaining_hits = $('#' + id + ' input[name=twitter_api_remaining_hits]').val();
-			$('#twitter-api-remaining-hits').text(twitter_api_remaining_hits);
+			if (twitter_api_remaining_hits) {
+				$('#twitter-api-remaining-hits').text(twitter_api_remaining_hits);
+			}
 			$('#status-msg').html('');
 			if ($('#' + id).children('.new')) {
 				dashboard.titleNewMessages();
 			}
+			dashboard.clearStatusMsg();
 			dashboard.reset();
 		});
 	},

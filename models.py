@@ -19,3 +19,12 @@ class Column(db.Model):
 	refresh_rate = db.IntegerProperty(default=120)
 	last_updated_at = db.DateTimeProperty(auto_now=True)
 	last_id_returned = db.StringProperty()
+
+class TwitterFollowers(db.Model):
+	user = db.UserProperty(required=True)
+	id	= db.StringProperty()
+	screen_name = db.StringProperty()
+	location = db.StringProperty()
+	description = db.StringProperty()
+	profile_image_url = db.StringProperty()
+	url = db.StringProperty()
