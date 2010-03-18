@@ -39,9 +39,6 @@ class ManageColumns(webapp.RequestHandler):
 		}
 	
 	def get(self, key=""):
-		logging.info('Accessing dashboard management')
-
-
 		templateValues = {}
 	
 		userprefs = models.UserPrefs.gql("WHERE user = :user LIMIT 1", user=users.get_current_user()).get()
@@ -148,8 +145,6 @@ class ManageColumns(webapp.RequestHandler):
 class ColumnResults(webapp.RequestHandler):
 
 	def get(self, key=""):
-
-		logging.info('Accessing column results')
 		handler = ColumnHandler()
 		handler.getTwitterRateLimit()
 
@@ -374,7 +369,6 @@ class ColumnHandler(object):
 class MainDashboard(webapp.RequestHandler):
 
 	def get(self):
-		# logging.info('Accessing dashboard')
 		user = users.get_current_user()
 
 		handler = ColumnHandler()
