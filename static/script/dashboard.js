@@ -142,7 +142,7 @@ var dashboard = {
 	},
 	reset: function() {
 			$('.rounded').corner();
-			$('.hidden').hide();
+			$('#all-columns .hidden').hide();
 			dashboard.resizeColumns();
 	},
 	titleNewMessages: function() {
